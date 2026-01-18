@@ -7,11 +7,11 @@
     <style>
         :root { --p: #6366f1; --bg: #05070a; --card: #111827; --accent: #00d2ff; }
         body { margin: 0; font-family: 'Segoe UI', sans-serif; background: radial-gradient(circle at center, #1e1b4b 0%, var(--bg) 100%); color: white; display: flex; justify-content: center; align-items: center; height: 100vh; overflow: hidden; }
-        .container { width: 95%; max-width: 750px; height: 90vh; background: rgba(17, 24, 39, 0.95); backdrop-filter: blur(15px); border-radius: 24px; border: 1px solid rgba(0, 210, 255, 0.3); display: flex; flex-direction: column; box-shadow: 0 0 50px rgba(0,0,0,0.8); }
+        .container { width: 95%; max-width: 750px; height: 90vh; background: rgba(17, 24, 39, 0.95); border-radius: 24px; border: 1px solid rgba(0, 210, 255, 0.3); display: flex; flex-direction: column; box-shadow: 0 0 50px rgba(0,0,0,0.8); }
         .header { padding: 20px; border-bottom: 1px solid #1f2937; text-align: center; }
         .header h1 { margin: 0; font-size: 28px; color: var(--accent); letter-spacing: 5px; text-shadow: 0 0 15px var(--accent); }
-        #chat { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 12px; scroll-behavior: smooth; }
-        .msg { padding: 14px 18px; border-radius: 18px; max-width: 85%; font-size: 15px; }
+        #chat { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 12px; }
+        .bubble { padding: 14px 18px; border-radius: 18px; max-width: 85%; font-size: 15px; }
         .user { align-self: flex-end; background: linear-gradient(135deg, var(--p), #4338ca); color: white; border-bottom-right-radius: 4px; }
         .bot { align-self: flex-start; background: #1f2937; border: 1px solid #374151; border-bottom-left-radius: 4px; }
         .input-bar { padding: 20px; background: #0b111a; border-top: 1px solid #1f2937; display: flex; gap: 10px; }
@@ -23,8 +23,8 @@
 <body>
 
 <div class="container">
-    <div class="header"><h1>COSMIC AI</h1><div id="status">✦ CORE STANDBY ✦</div></div>
-    <div id="chat"><div class="msg bot"><b>CosmicAI:</b> Multi-core link initiated. Transmit your signal.</div></div>
+    <div class="header"><h1>COSMIC AI</h1><div id="status">✦ NEURAL LINK STANDBY ✦</div></div>
+    <div id="chat"><div class="msg bot"><b>CosmicAI:</b> Neural link re-calibrated. Version v1beta restored. Transmit signal.</div></div>
     <div class="input-bar">
         <input type="text" id="inp" placeholder="Transmit signal..." autocomplete="off">
         <button onclick="transmit()">SEND</button>
@@ -40,56 +40,48 @@
         const val = inp.value.trim();
         if(!val) return;
 
-        appendBubble("You", val, "user");
+        append("You", val, "user");
         inp.value = "";
         history.push({"role": "user", "parts": [{"text": val}]});
         
         const status = document.getElementById("status");
-        status.innerText = "✦ SCANNING FOR ACCESSIBLE CORE... ✦";
+        status.innerText = "✦ TUNING TO BETA CORE... ✦";
 
-        // 404 fix ke liye hum teeno major endpoints try karenge
-        const endpoints = [
-            `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${K}`,
-            `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${K}`,
-            `https://generativelanguage.googleapis.com/v1/models/gemini-pro:generateContent?key=${K}`
-        ];
+        // URL Changed back to v1beta for gemini-1.5-flash compatibility
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${K}`;
 
-        let success = false;
+        try {
+            const response = await fetch(url, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ "contents": history })
+            });
 
-        for (let url of endpoints) {
-            if (success) break;
-            try {
-                const response = await fetch(url, {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ "contents": history })
-                });
+            const data = await response.json();
 
-                const data = await response.json();
-
-                if (data.candidates && data.candidates[0]) {
-                    const aiText = data.candidates[0].content.parts[0].text.replace(/Gemini/g, "CosmicAI");
-                    history.push({"role": "model", "parts": [{"text": aiText}]});
-                    appendBubble("CosmicAI", aiText, "bot");
-                    status.innerText = "✦ SIGNAL STABLE ✦";
-                    success = true;
-                }
-            } catch (e) {
-                console.log("Endpoint failed, trying next...");
+            if (data.error) {
+                status.innerText = "✦ SIGNAL REJECTED ✦";
+                append("System", "Diagnostic: " + data.error.message, "bot");
+                return;
             }
-        }
 
-        if (!success) {
-            status.innerText = "✦ ALL CORES OFFLINE ✦";
-            appendBubble("System", "Diagnostic: 404 Persistent. Please check your Google AI Studio project settings.", "bot");
+            if (data.candidates && data.candidates[0]) {
+                const aiText = data.candidates[0].content.parts[0].text.replace(/Gemini/g, "CosmicAI");
+                history.push({"role": "model", "parts": [{"text": aiText}]});
+                append("CosmicAI", aiText, "bot");
+                status.innerText = "✦ SIGNAL STABLE ✦";
+            }
+        } catch (e) {
+            status.innerText = "✦ INTERFERENCE ✦";
+            append("System", "Critical Error: " + e.message, "bot");
         }
     }
 
-    function appendBubble(sender, text, className) {
+    function append(s, t, c) {
         const logs = document.getElementById("chat");
         const div = document.createElement("div");
-        div.className = `msg ${className}`;
-        div.innerHTML = `<b>${sender}:</b><br>${text.replace(/\n/g, '<br>')}`;
+        div.className = `msg ${c}`;
+        div.innerHTML = `<b>${s}:</b><br>${t.replace(/\n/g, '<br>')}`;
         logs.appendChild(div);
         logs.scrollTop = logs.scrollHeight;
     }
