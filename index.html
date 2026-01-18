@@ -23,8 +23,15 @@
 <body>
 
 <div class="container">
-    <div class="header"><h1>COSMIC AI</h1><div id="status">✦ CORE STANDBY ✦</div></div>
-    <div id="chat"><div class="msg bot"><b>CosmicAI:</b> Neural pathways cleared. Send a message to test signal.</div></div>
+    <div class="header">
+        <h1>COSMIC AI</h1>
+        <div id="status">✦ CORE STANDBY ✦</div>
+    </div>
+
+    <div id="chat">
+        <div class="msg bot"><b>CosmicAI:</b> Neural pathways cleared. Send a message to test signal.</div>
+    </div>
+
     <div class="input-bar">
         <input type="text" id="inp" placeholder="Transmit query..." autocomplete="off">
         <button onclick="transmit()">SEND</button>
@@ -32,8 +39,8 @@
 </div>
 
 <script>
-    // Apni API key yahan ensure karein
-    const K = "AIzaSyB-x7PqKWhrPSI5B3XTptEX60XaI3NkJX0";
+    // NEW API KEY ADDED
+    const K = "AIzaSyCPFq6h-wYpFwkDWq4Do4B9AroKm72earA";
     let history = [];
 
     async function transmit() {
@@ -43,12 +50,11 @@
 
         append("You", val, "user");
         inp.value = "";
-        history.push({"role": "user", "parts": [{"text": val}]});
-        
+        history.push({ role: "user", parts: [{ text: val }] });
+
         const status = document.getElementById("status");
         status.innerText = "✦ SCANNING FOR ACTIVE CORE... ✦";
 
-        // Try multiple model paths (Google updates them frequently)
         const endpoints = [
             `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${K}`,
             `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${K}`,
@@ -58,45 +64,40 @@
         let connected = false;
 
         for (let url of endpoints) {
-            if (connected) break;
             try {
-                const response = await fetch(url, {
+                const res = await fetch(url, {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({ contents: history })
                 });
 
-                const data = await response.json();
+                const data = await res.json();
 
                 if (data.candidates && data.candidates[0]) {
-                    const aiText = data.candidates[0].content.parts[0].text.replace(/Gemini/g, "CosmicAI");
-                    history.push({"role": "model", "parts": [{"text": aiText}]});
+                    const aiText = data.candidates[0].content.parts[0].text;
+                    history.push({ role: "model", parts: [{ text: aiText }] });
                     append("CosmicAI", aiText, "bot");
                     status.innerText = "✦ SIGNAL STABLE ✦";
                     connected = true;
+                    break;
                 }
-            } catch (e) {
-                console.log("Endpoint failed, trying next...");
-            }
+            } catch (e) {}
         }
 
         if (!connected) {
             status.innerText = "✦ ALL CORES OFFLINE ✦";
-            append("System", "Diagnostic: Your API Key is valid but restricted. Please create a NEW Key in Google AI Studio and ensure you select 'Gemini API' for 'Generative AI Studio'.", "bot");
+            append("System", "API error or permission issue.", "bot");
         }
     }
 
     function append(s, t, c) {
-        const chatLogs = document.getElementById("chat");
+        const chat = document.getElementById("chat");
         const div = document.createElement("div");
         div.className = `msg ${c}`;
-        div.innerHTML = `<b>${s}:</b><br>${t.replace(/\n/g, '<br>')}`;
-        chatLogs.appendChild(div);
-        chatLogs.scrollTop = chatLogs.scrollHeight;
+        div.innerHTML = `<b>${s}:</b><br>${t.replace(/\n/g, "<br>")}`;
+        chat.appendChild(div);
+        chat.scrollTop = chat.scrollHeight;
     }
 
-    document.getElementById("inp").addEventListener("keypress", (e) => { if(e.key === "Enter") transmit(); });
-</script>
-
-</body>
-</html>
+    document.getElementById("inp").addEventListener("keypress", e => {
+        if (e.key === "Enter") transmit();
